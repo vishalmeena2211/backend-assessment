@@ -66,7 +66,14 @@ export const signup = async (req: Request, res: Response) => {
             },
         });
 
-        res.status(201).json({ message: 'User registered successfully', user });
+        const payload = {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+        };
+
+        res.status(201).json({ message: 'User registered successfully', payload });
 
     } catch (error) {
         res.status(500).json({ error: 'User registration failed', message: error });
