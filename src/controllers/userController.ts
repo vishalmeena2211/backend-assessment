@@ -1,12 +1,25 @@
 import { PrismaClient } from '@prisma/client';
 import { Request, Response } from 'express';
+import { z } from 'zod';
 
 const prisma = new PrismaClient();
 
+// Schema for validating query parameters for getting all users
+const getAllUsersSchema = z.object({
+    query: z.object({
+        page: z.string().optional().transform((val) => parseInt(val || '1'))
+    })
+});
+
+// Controller to get all users with pagination
 export const getAllUsers = async (req: Request, res: Response) => {
-    const page = parseInt(req.query.page as string) || 1;
+    const validation = getAllUsersSchema.safeParse(req);
+    if (!validation.success) {
+        return res.status(400).json({ error: validation.error.errors });
+    }
+
+    const page = validation.data.query.page || 1;
     const usersPerPage = 10;
-    console.log(page);
 
     try {
         const users = await prisma.user.findMany({
@@ -28,9 +41,21 @@ export const getAllUsers = async (req: Request, res: Response) => {
     }
 };
 
+// Schema for validating request parameters for getting a user by ID
+const getUserByIdSchema = z.object({
+    params: z.object({
+        id: z.string().uuid()
+    })
+});
 
+// Controller to get a user by ID
 export const getUserById = async (req: Request, res: Response) => {
-    const { id } = req.params;
+    const validation = getUserByIdSchema.safeParse(req);
+    if (!validation.success) {
+        return res.status(400).json({ error: validation.error.errors });
+    }
+
+    const { id } = validation.data.params;
     try {
         const user = await prisma.user.findUnique({
             where: { id: id },
@@ -53,9 +78,26 @@ export const getUserById = async (req: Request, res: Response) => {
     }
 };
 
+// Schema for validating request parameters and body for updating a user
+const updateUserSchema = z.object({
+    params: z.object({
+        id: z.string().uuid()
+    }),
+    body: z.object({
+        name: z.string().min(1),
+        email: z.string().email()
+    })
+});
+
+// Controller to update a user by ID
 export const updateUser = async (req: Request, res: Response) => {
-    const { id } = req.params;
-    const { name, email } = req.body;
+    const validation = updateUserSchema.safeParse(req);
+    if (!validation.success) {
+        return res.status(400).json({ error: validation.error.errors });
+    }
+
+    const { id } = validation.data.params;
+    const { name, email } = validation.data.body;
     try {
         const updatedUser = await prisma.user.update({
             where: { id: id },
@@ -67,8 +109,21 @@ export const updateUser = async (req: Request, res: Response) => {
     }
 };
 
+// Schema for validating request parameters for deleting a user
+const deleteUserSchema = z.object({
+    params: z.object({
+        id: z.string().uuid()
+    })
+});
+
+// Controller to delete a user by ID
 export const deleteUser = async (req: Request, res: Response) => {
-    const { id } = req.params;
+    const validation = deleteUserSchema.safeParse(req);
+    if (!validation.success) {
+        return res.status(400).json({ error: validation.error.errors });
+    }
+
+    const { id } = validation.data.params;
     try {
         await prisma.user.delete({
             where: { id: id },

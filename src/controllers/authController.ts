@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import nodemailer from 'nodemailer';
 import { PrismaClient } from '@prisma/client';
 import dotenv from 'dotenv';
+import { z } from 'zod';
 
 dotenv.config();
 
@@ -17,8 +18,34 @@ const generateRefreshToken = (user: any) => {
     return jwt.sign(user, process.env.JWT_REFRESH_SECRET || "", { expiresIn: '7d' });
 };
 
+// Define Zod schemas
+const signupSchema = z.object({
+    name: z.string().min(1, "Name is required"),
+    email: z.string().email("Invalid email address"),
+    password: z.string().min(6, "Password must be at least 6 characters long"),
+});
+
+const loginSchema = z.object({
+    email: z.string().email("Invalid email address"),
+    password: z.string().min(6, "Password must be at least 6 characters long"),
+});
+
+const forgotPasswordSchema = z.object({
+    email: z.string().email("Invalid email address"),
+});
+
+const resetPasswordSchema = z.object({
+    token: z.string(),
+    newPassword: z.string().min(6, "Password must be at least 6 characters long"),
+});
+
 export const signup = async (req: Request, res: Response) => {
-    const { name, email, password } = req.body;
+    const validation = signupSchema.safeParse(req.body);
+    if (!validation.success) {
+        return res.status(400).json({ error: validation.error.errors });
+    }
+
+    const { name, email, password } = validation.data;
 
     try {
         const userExists = await prisma.user.findUnique({
@@ -47,7 +74,12 @@ export const signup = async (req: Request, res: Response) => {
 };
 
 export const login = async (req: Request, res: Response) => {
-    const { email, password } = req.body;
+    const validation = loginSchema.safeParse(req.body);
+    if (!validation.success) {
+        return res.status(400).json({ error: validation.error.errors });
+    }
+
+    const { email, password } = validation.data;
 
     try {
         const user = await prisma.user.findUnique({
@@ -84,7 +116,12 @@ export const login = async (req: Request, res: Response) => {
 };
 
 export const forgotPassword = async (req: Request, res: Response) => {
-    const { email } = req.body;
+    const validation = forgotPasswordSchema.safeParse(req.body);
+    if (!validation.success) {
+        return res.status(400).json({ error: validation.error.errors });
+    }
+
+    const { email } = validation.data;
 
     try {
         const user = await prisma.user.findUnique({
@@ -122,7 +159,12 @@ export const forgotPassword = async (req: Request, res: Response) => {
 };
 
 export const resetPassword = async (req: Request, res: Response) => {
-    const { token, newPassword } = req.body;
+    const validation = resetPasswordSchema.safeParse(req.body);
+    if (!validation.success) {
+        return res.status(400).json({ error: validation.error.errors });
+    }
+
+    const { token, newPassword } = validation.data;
 
     try {
         const decoded: any = jwt.verify(token, process.env.JWT_SECRET || "");
@@ -172,7 +214,6 @@ export const refreshAccessToken = async (req: Request, res: Response) => {
         res.status(500).json({ error: 'Token refresh failed' });
     }
 };
-
 
 export const logout = async (req: Request, res: Response) => {
     const refreshToken: string = req.cookies.refreshToken;
