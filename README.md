@@ -93,7 +93,7 @@ This is a backend application built using TypeScript, Prisma, MySQL, and Express
 
 1. Clone the repository:
      ```sh
-     git clone [<repository-url>](https://github.com/vishalmeena2211/backend-assessment.git)
+     git clone https://github.com/vishalmeena2211/backend-assessment.git
      ```
 2. Install dependencies:
      ```sh
